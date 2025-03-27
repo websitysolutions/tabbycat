@@ -1,13 +1,3 @@
-# Docker-compose is a way to run multiple containers at once and connect them
-# This sets up and runs postgres and the django dev server as services
-# Reference: https://docs.docker.com/compose/compose-file/
-
-# Initial setup with
-# $ docker-compose -f docker-compose.yml up
-
-# Can run management commands with
-# $ docker-compose run web /code/manage.py whatever
-
 version: '3'
 
 services:
@@ -23,40 +13,30 @@ services:
   redis:
     image: redis:6
     volumes:
-     - redis_data:/data
+      - redis_data:/data
 
   web:
     build: .
-    # Hack to wait until Postgres is up before running things
     command: ["./bin/docker-wait.sh", "--timeout=0", "db:5432", "--", "./bin/docker-run-honcho.sh"]
     depends_on:
       - db
       - redis
     expose:
       - "8000"
-    environment:
-      - DEBUG=1
-      - IN_DOCKER=1
-      - DISABLE_SENTRY=1
-      - DOCKER_REDIS=1
-      - USING_NGINX=1
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     working_dir: /tcd
 
   worker:
     build: .
-    # Hack to wait until migration is done before running things
     command: ["./bin/docker-wait.sh", "--timeout=0", "web:8000", "--", "./bin/docker-run-worker.sh"]
     depends_on:
       - db
       - redis
-    environment:
-      - DEBUG=1
-      - IN_DOCKER=1
-      - DISABLE_SENTRY=1
-      - DOCKER_REDIS=1
-      - USING_NGINX=1
+    env_file:
+      - .env
     working_dir: /tcd
 
 volumes:
